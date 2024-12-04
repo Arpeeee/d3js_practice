@@ -1,0 +1,39 @@
+.container {
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+.split-view {
+    width: 50%;
+    /* height: 100%; */
+    background-color: #f0f0f0;
+}
+
+#left-view {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    font-size: 0.8em;
+    font-family: sans-serif;
+}
+
+html, body {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+}
+
+* {
+    border: 1px solid red;
+    box-sizing: border-box;
+}
