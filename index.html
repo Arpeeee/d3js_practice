@@ -2,7 +2,9 @@
     <head>
         <title>D3 test page</title>
         <script src="https://d3js.org/d3.v7.min.js"></script>
+
         <script src="d3test.js"></script>
+        <!-- <script src="echarts_test.js"></script> -->
         <link rel="stylesheet" href="d3test.css">
     </head>
     <body>
@@ -11,6 +13,9 @@
             </div>
             <div class="split-view">
                 <button id="update-button" onclick="drawBlackRectangle(8000, 2000)">Update</button>
+                <button id="add-icon-button" onclick="addIconAtIndex()">Add Icon</button>
+                <input type="text" id="x-input" placeholder="X">
+                <input type="text" id="y-input" placeholder="Y">
             </div>
         </div>
     </body>

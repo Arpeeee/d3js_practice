@@ -38,7 +38,7 @@ function drawCharts() {
         .range([domHeight - margin.bottom, margin.top]);
 
     updateAxis(width, domHeight, margin);
-    console.log(`domHeight: ${domHeight}`);
+    // zoomY(svg, width, domHeight, margin);
 }
 
 // function drawBlackRectangle(width, height) {
@@ -80,7 +80,7 @@ function drawBlackRectangle(width, height) {
     // 檢查是否需要增加SVG高度
     if (currentY + height * 5 >= currentMaxY) {
         totalHeight += domHeight - margin.bottom - margin.top;
-        currentMaxY += 20000;
+        currentMaxY += 60000;
         svg.attr("height", totalHeight);
         y.domain([currentMaxY, 0])
             .range([totalHeight - margin.bottom, margin.top]);
@@ -93,22 +93,65 @@ function drawBlackRectangle(width, height) {
         .attr("y", y(currentY))
         .attr("width", x(width) - x(0))
         .attr("height", y(currentY) - y(currentY - height))
-        .attr("fill", "yellow")
-        .attr("stroke", "black")
-        .attr("stroke-width", 2);
+        .attr("fill", "#B6CDAF") 
+        // .attr("stroke", "black")
+        // .attr("stroke-width", 2);
 
     // 記錄第一個矩形的高度
     if (rectHeight == 0) {
         rectHeight = rect.node().getBBox().height;
     }
-    console.log(`rectHeight: ${rectHeight}`);
-    console.log(`currentY: ${currentY}`);
     // 更新當前y位置
     currentY += height;
 }
 
+function addIconAtIndex() {
+    const xIndex = document.getElementById("x-input").value;
+    const yIndex = document.getElementById("y-input").value;
+    // 確保 index 不超過 currentMaxY
+    if (yIndex <= currentMaxY) {
+        svg.append("text")
+            .attr("x", x(xIndex)) // 使用 domain 計算後的 x 位置
+            .attr("y", y(yIndex)) // 使用 domain 計算後的 y 位置
+            .attr("font-size", "6px") // 設置圖標大小
+            .text("🔥") // 這裡使用 Font Awesome 的用戶圖標作為示例
+            .on("mouseover", function() {
+                d3.select(this).attr("fill", "red"); // 當滑鼠移過時改變顏色
+                // 顯示 popup
+                const popup = svg.append("rect")
+                    .attr("width", "100px")
+                    .attr("height", "50px")
+                    .attr("fill", "white")
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 2)
+                    .style("font-size", "12px") // 設置字體大小
+                    .style("font-family", "Arial, sans-serif") // 設置字體
+                    .style("color", "black") // 設置字體顏色
+                    .text(`X: ${xIndex}\nY: ${yIndex}`); // 這裡是 popup 的內容
+
+                // 讓 popup 隨著滑鼠移動
+                svg.on("mousemove", function(event) {
+                    const [mouseX, mouseY] = d3.pointer(event);
+                    popup.attr("x", mouseX + 5) // 偏移一點以避免重疊
+                         .attr("y", mouseY - 5); // 偏移一點以避免重疊
+                });
+
+                d3.select(this).on("mouseout", function() {
+                    d3.select(this).attr("fill", "black"); // 當滑鼠移開時恢復顏色
+                    popup.remove(); // 移除 popup
+                    svg.on("mousemove", null); // 移除 mousemove 事件
+                });
+            })
+            .style("cursor", "pointer")
+            .on("click", function() {
+                alert("Icon clicked!"); // 當點擊時顯示提示訊息
+            });
+    }
+}
+
 function updateAxis(width, height, margin) {
-    svg.selectAll(".axis").remove();
+    svg.selectAll(".x-axis").remove();
+    svg.selectAll(".y-axis").remove();
 
     const xAxis = d3.axisBottom(x);
     const yAxis = d3.axisLeft(y);
@@ -116,36 +159,53 @@ function updateAxis(width, height, margin) {
     const yAxisRight = d3.axisRight(y);
 
     svg.append("g")
-        .attr("class", "axis")
+        .attr("class", "x-axis")
         .attr("transform", `translate(0,${height - margin.bottom})`)
         .call(xAxis);
 
     svg.append("g")
-        .attr("class", "axis")
+        .attr("class", "y-axis")
         .attr("transform", `translate(${margin.left},0)`)
+        .transition()
         .call(yAxis);
 
     svg.append("g")
-        .attr("class", "axis")
+        .attr("class", "x-axis")
         .attr("transform", `translate(0,${margin.top})`)
         .call(xAxisTop);
 
     svg.append("g")
-        .attr("class", "axis")
+        .attr("class", "y-axis")
         .attr("transform", `translate(${width - margin.right},0)`)
+        .transition()
         .call(yAxisRight);
 }
 
+// function zoomY(svg, width, height, margin) {
+//     const extent = [[margin.left, margin.top], [width - margin.right, height - margin.bottom]];
+
+//     svg.call(d3.zoom()
+//         .scaleExtent([1, 8])
+//         .translateExtent(extent)
+//         .extent(extent)
+//         .on("zoom", zoomedY));
+
+//     // function zoomedY(event) {
+//     //     y.range([height - margin.bottom, margin.top].map(d => event.transform.applyY(d)));
+//     //     svg.selectAll(".y-axis").call(d3.axisLeft(y));
+//     //     svg.selectAll(".y-axis-right").call(d3.axisRight(y));
+//     //     svg.selectAll("rect")
+//     //         .attr("y", function() { return y(d3.select(this).attr("y")); })
+//     //         .attr("height", function() { return y(0) - y(d3.select(this).attr("height")); });
+//     // }
+// }
+
 function initDraw() {
-    currentMaxY = 20000;
+    currentMaxY = 60000;
     drawCharts();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     leftView = d3.select("#left-view");
-
     initDraw();
-    // setTimeout(() => {
-    //     drawBlackRectangle(svg, x, y);
-    // }, 1000);
 });
