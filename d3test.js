@@ -1,15 +1,15 @@
-
 var leftView;
 var svg;
 var x;
-var y;
+var newY;
 var currentMaxY;
 var currentY = 0;
 var margin;
 var rectHeight = 0;
 var domHeight = 0;
 var totalHeight = 0;
-
+var defectImagesMap = {};
+const DEFECT_HEIGHT = 40000;
 function drawCharts() {
     const container = leftView.node().getBoundingClientRect();
 
@@ -30,122 +30,134 @@ function drawCharts() {
         .attr("height", domHeight);
 
     x = d3.scaleLinear()
-        .domain([0, 8000])
+        .domain([0, 8200])
         .range([margin.left, width - margin.right]);
 
     y = d3.scaleLinear()
         .domain([currentMaxY, 0])
         .range([domHeight - margin.bottom, margin.top]);
 
+    newY == null ? newY = y : null;
+    svg.call(d3.zoom()
+        .scaleExtent([1, 10])
+        .translateExtent([[0, 0], [width, domHeight]])
+        .on("zoom", function(event) {
+            const transform = event.transform;
+            newY = transform.rescaleY(y);
+
+            svg.selectAll(".y-axis")
+                .call(d3.axisLeft(newY).ticks(10).tickFormat(d => Math.max(0, d)));
+
+            svg.selectAll(".defect-rect")
+                .attr("y", function() {
+                    const originalY = d3.select(this).attr("data-original-y");
+                    return newY(Math.max(0, originalY));
+                })
+                .attr("height", function() {
+                    const originalHeight = d3.select(this).attr("data-original-height");
+                    return newY(Math.max(0, originalHeight)) - newY(0);
+                })
+
+            svg.selectAll(".defect-icon")
+                .attr("y", function() {
+                    const originalY = d3.select(this).attr("data-original-y");
+                    return newY(Math.max(0, originalY));
+                })
+                
+        }));
+
     updateAxis(width, domHeight, margin);
     // zoomY(svg, width, domHeight, margin);
 }
 
-// function drawBlackRectangle(width, height) {
-//     const container = leftView.node().getBoundingClientRect();
-
-//     // 計算每個圖表的寬度和高度
-//     const conWidth = container.width;
-//     const conHeight = svg.node().getBBox().height;
-
-//     // 确保矩形不会重叠
-//     if (currentY + height <= currentMaxY) {
-//         let rect = svg.append("rect")
-//             .attr("x", x(0))
-//             .attr("y", y(currentY)) 
-//             .attr("width", x(width) - x(0))
-//             .attr("height", y(currentY) - y(currentY - height))
-//             .attr("fill", "yellow")
-//             .attr("stroke", "black")
-//             .attr("stroke-width", 2);
-//         if (rectHeight == 0) {
-//             rectHeight = rect.node().getBBox().height;
-//         }
-//         currentY += height;
-//     }
-
-//     console.log(currentY);
-//     if (currentY + height  == currentMaxY) {
-//         currentMaxY += height ; // 增加更多的空间
-//         svg.attr("height", conHeight + rectHeight ); // 调整高度
-//         y.range([conHeight + rectHeight - margin.bottom, margin.top]); 
-//         updateAxis(conWidth, conHeight + rectHeight , margin);
-//     }
-//     console.log(currentMaxY);
-//     y.domain([currentMaxY, 0]);
-// }
 function drawBlackRectangle(width, height) {
     const container = leftView.node().getBoundingClientRect();
     const conWidth = container.width;
     // 檢查是否需要增加SVG高度
-    if (currentY + height * 5 >= currentMaxY) {
-        totalHeight += domHeight - margin.bottom - margin.top;
-        currentMaxY += 60000;
-        svg.attr("height", totalHeight);
-        y.domain([currentMaxY, 0])
-            .range([totalHeight - margin.bottom, margin.top]);
-        updateAxis(conWidth, totalHeight, margin);
+    if (currentY + height * 10 >= currentMaxY) {
+        currentMaxY += height * 10;
+        y.domain([currentMaxY, 0]);
+        newY = y;
+        svg.selectAll(".y-axis")
+            .call(d3.axisLeft(newY).ticks(10).tickFormat(d => Math.max(0, d)));
     }
 
     // 繪製新矩形
     let rect = svg.append("rect")
         .attr("x", x(0))
-        .attr("y", y(currentY))
+        .attr("y", newY(currentY))
         .attr("width", x(width) - x(0))
-        .attr("height", y(currentY) - y(currentY - height))
-        .attr("fill", "#B6CDAF") 
-        // .attr("stroke", "black")
-        // .attr("stroke-width", 2);
+        .attr("height", newY(height) - newY(0))
+        .attr("fill", "#B6CDAF")
+        .attr("class", "defect-rect")
+        .attr("data-original-y", currentY)
+        .attr("data-original-height", height)
+    // .attr("stroke", "black")
+    // .attr("stroke-width", 2);
 
     // 記錄第一個矩形的高度
-    if (rectHeight == 0) {
-        rectHeight = rect.node().getBBox().height;
-    }
+    // if (rectHeight == 0) {
+    //     rectHeight = rect.node().getBBox().height;
+    // }
     // 更新當前y位置
     currentY += height;
 }
-
+let defect_id = 0;
 function addIconAtIndex() {
-    const xIndex = document.getElementById("x-input").value;
-    const yIndex = document.getElementById("y-input").value;
+    defect_id++;
+    const xIndex = d3.select("#x-input").node().value;
+    const yIndex = d3.select("#y-input").node().value;
     // 確保 index 不超過 currentMaxY
     if (yIndex <= currentMaxY) {
-        svg.append("text")
+        svg.append("rect")
             .attr("x", x(xIndex)) // 使用 domain 計算後的 x 位置
-            .attr("y", y(yIndex)) // 使用 domain 計算後的 y 位置
-            .attr("font-size", "6px") // 設置圖標大小
-            .text("🔥") // 這裡使用 Font Awesome 的用戶圖標作為示例
-            .on("mouseover", function() {
-                d3.select(this).attr("fill", "red"); // 當滑鼠移過時改變顏色
+            .attr("y", newY(yIndex)) // 使用 domain 計算後的 y 位置
+            .attr("width", 10)
+            .attr("height", 10)
+            .attr("class", "defect-icon")
+            .attr("border-radius", '10vw')
+            .attr("id", `${defect_id}_icon`)
+            .attr("data-id", defect_id)
+            .attr("data-original-y", yIndex)
+            .attr("fill", "red")
+            .on("mouseover", function () {
                 // 顯示 popup
-                const popup = svg.append("rect")
+                const popupGroup = svg.append("g")
+                    .attr("class", "popup_icon");
+                // 添加矩形背景
+                popupGroup.append("rect")
                     .attr("width", "100px")
                     .attr("height", "50px")
                     .attr("fill", "white")
                     .attr("stroke", "black")
-                    .attr("stroke-width", 2)
-                    .style("font-size", "12px") // 設置字體大小
-                    .style("font-family", "Arial, sans-serif") // 設置字體
-                    .style("color", "black") // 設置字體顏色
-                    .text(`X: ${xIndex}\nY: ${yIndex}`); // 這裡是 popup 的內容
+                    .attr("stroke-width", 2);
+
+                // 添加文字（作為獨立元素）
+                popupGroup.append("text")
+                    .attr("x", 10)
+                    .attr("y", 20)
+                    .text(`X: ${xIndex}`);
+
+                popupGroup.append("text")
+                    .attr("x", 10)
+                    .attr("y", 40)  // 第二行的y位置增加
+                    .text(`Y: ${yIndex}`);
 
                 // 讓 popup 隨著滑鼠移動
-                svg.on("mousemove", function(event) {
+                svg.on("mousemove", function (event) {
                     const [mouseX, mouseY] = d3.pointer(event);
-                    popup.attr("x", mouseX + 5) // 偏移一點以避免重疊
-                         .attr("y", mouseY - 5); // 偏移一點以避免重疊
+                    popupGroup.attr("transform", `translate(${mouseX + 5}, ${mouseY - 5})`);
                 });
 
-                d3.select(this).on("mouseout", function() {
-                    d3.select(this).attr("fill", "black"); // 當滑鼠移開時恢復顏色
-                    popup.remove(); // 移除 popup
-                    svg.on("mousemove", null); // 移除 mousemove 事件
+                d3.select(this).on("mouseout", function () {
+                    popupGroup.remove();
+                    svg.on("mousemove", null);
                 });
             })
             .style("cursor", "pointer")
-            .on("click", function() {
-                alert("Icon clicked!"); // 當點擊時顯示提示訊息
-            });
+            .on("click", function () {
+                defectImgClick(this);
+            })
     }
 }
 
@@ -153,10 +165,12 @@ function updateAxis(width, height, margin) {
     svg.selectAll(".x-axis").remove();
     svg.selectAll(".y-axis").remove();
 
-    const xAxis = d3.axisBottom(x);
-    const yAxis = d3.axisLeft(y);
-    const xAxisTop = d3.axisTop(x);
-    const yAxisRight = d3.axisRight(y);
+    const tickCount = Math.max(Math.floor(height / 40), 5); // Adjust tick density based on height
+    console.log(tickCount);
+    const xAxis = d3.axisBottom(x)
+    const yAxis = d3.axisLeft(y).ticks(tickCount);
+    const xAxisTop = d3.axisTop(x)
+    const yAxisRight = d3.axisRight(y).ticks(tickCount);
 
     svg.append("g")
         .attr("class", "x-axis")
@@ -181,27 +195,72 @@ function updateAxis(width, height, margin) {
         .call(yAxisRight);
 }
 
-// function zoomY(svg, width, height, margin) {
-//     const extent = [[margin.left, margin.top], [width - margin.right, height - margin.bottom]];
+// add a zoom function
 
-//     svg.call(d3.zoom()
-//         .scaleExtent([1, 8])
-//         .translateExtent(extent)
-//         .extent(extent)
-//         .on("zoom", zoomedY));
+function bringIconsToFront() {
+    const icons = svg.selectAll(".defect-icon");
+    if (!icons.empty()) {
+        icons.raise();
+    }
+}
 
-//     // function zoomedY(event) {
-//     //     y.range([height - margin.bottom, margin.top].map(d => event.transform.applyY(d)));
-//     //     svg.selectAll(".y-axis").call(d3.axisLeft(y));
-//     //     svg.selectAll(".y-axis-right").call(d3.axisRight(y));
-//     //     svg.selectAll("rect")
-//     //         .attr("y", function() { return y(d3.select(this).attr("y")); })
-//     //         .attr("height", function() { return y(0) - y(d3.select(this).attr("height")); });
-//     // }
-// }
+function zoomed(event) {
+    const container = leftView.node().getBoundingClientRect();
+    const width = container.width;
+    const domHeight = container.height;
+    const tickCount = Math.max(Math.floor(domHeight / 40), 5); // Adjust tick density based on height
+
+    // 更新y軸和內容的縮放比例，比例不變
+    const newY = event.transform.rescaleY(y);
+
+    // 限制y軸的最小值為0
+    const clampedY = d3.scaleLinear()
+        .domain([Math.max(0, currentMaxY), 0])
+        .range([totalHeight - margin.bottom, margin.top]);
+
+    // 更新左側和右側的y軸，確保0在最上面
+    svg.selectAll(".y-axis")
+        .filter((d, i, nodes) => d3.select(nodes[i]).attr("transform").includes(margin.left))
+        .call(d3.axisLeft(clampedY).ticks(tickCount).tickFormat(d => Math.max(0, d)));
+    
+    svg.selectAll(".y-axis")
+        .filter((d, i, nodes) => d3.select(nodes[i]).attr("transform").includes(width - margin.right))
+        .call(d3.axisRight(clampedY).ticks(tickCount).tickFormat(d => Math.max(0, d)));
+
+    // 更新所有需要縮放的矩形，確保0在最上面
+    svg.selectAll("rect")
+        .attr("y", function() {
+            const originalY = d3.select(this).attr("data-original-y");
+            return clampedY(Math.max(0, originalY));
+        })
+        .attr("height", function() {
+            const originalHeight = d3.select(this).attr("data-original-height");
+            return clampedY(Math.max(0, originalHeight)) - clampedY(0);
+        });
+
+    // 更新所有需要縮放的圖標，確保0在最上面
+    svg.selectAll(".defect-icon")
+        .attr("y", function() {
+            const originalY = d3.select(this).attr("data-original-y");
+            return clampedY(Math.max(0, originalY));
+        })
+        .attr("height", function() {
+            const originalHeight = d3.select(this).attr("data-original-height");
+            return clampedY(Math.max(0, originalHeight)) - clampedY(0);
+        });
+
+    setTimeout(() => {
+        bringIconsToFront();
+    }, 200);
+
+    // 更新其他內容，保持比例不變
+    // svg.selectAll(".content")
+    //     .attr("y", d => clampedY(Math.max(0, d.y)))
+    //     .attr("height", d => clampedY(Math.max(0, d.y + d.height)) - clampedY(Math.max(0, d.y)));
+}
 
 function initDraw() {
-    currentMaxY = 60000;
+    currentMaxY = DEFECT_HEIGHT;
     drawCharts();
 }
 
@@ -209,3 +268,4 @@ document.addEventListener("DOMContentLoaded", () => {
     leftView = d3.select("#left-view");
     initDraw();
 });
+
