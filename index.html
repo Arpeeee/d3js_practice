@@ -6,20 +6,29 @@
         <!-- <script src="d3test.js"></script> -->
         <!-- <script src="echarts_test.js"></script> -->
         <link rel="stylesheet" href="d3test.css">
+        <!-- jquery -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <!-- <script src="https://pixijs.download/release/pixi.min.js"></script> -->
-        <script src="pixi.min.js"></script>
-        <script src="pixi_test.js"></script>
     </head>
     <body>
         <div class="container">
-            <div class="split-view" id="left-view" style="width: 50%; height: 100%; overflow-y: auto;">
+            <div class="split-view" id="mapcontainer" style="width: 50%; height: 100%; overflow-y: auto;">
             </div>
             <div class="split-view">
                 <button id="update-button" onclick="drawBlackRectangle(8000, 2000)">Update</button>
                 <button id="add-icon-button" onclick="addIconAtIndex()">Add Icon</button>
                 <input type="text" id="x-input" placeholder="X" value="1000">
                 <input type="text" id="y-input" placeholder="Y" value="1000">
+                <button id="start-defect">Start Defect</button>
+                <button id="stop-defect">Stop Defect</button>
+                <button id="zoomin">zoomin</button>
+                <button id="zoomout">zoomout</button>
             </div>
         </div>
+        <script src="pixi.js"></script>
+        <!-- <script src="pixi_test0508.js"></script> -->
+        <script src="map_new2.js"></script>
+
+
     </body>
 </html>
