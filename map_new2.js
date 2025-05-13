@@ -4,6 +4,7 @@ var x, y, newY;
 var currentMaxY=40000;
 var currentY = 0;
 var margin;
+var canvas;
 var defectFrameList = [];
 var defectImagesMap = {};
 const DEFECT_HEIGHT = 40000;
@@ -158,7 +159,7 @@ function drawCharts() {
     };
 
     // 加入 Canvas 元素
-    const canvas = document.createElement("canvas");
+    canvas = document.createElement("canvas");
     canvas.id = "defect-canvas";
     canvas.width = width - margin.left - margin.right;
     canvas.height = height - margin.top - margin.bottom;
@@ -168,7 +169,12 @@ function drawCharts() {
     canvas.style.zIndex = "0"; // 在 SVG 底層
     leftView.node().appendChild(canvas);
     ctx = canvas.getContext("2d");
-
+    canvas.addEventListener("click", function (e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        console.log(`Canvas Clicked at: ${x}, ${y}`);
+    });
     // 加入 SVG 元素
     svg = leftView.append("svg")
         .attr("id", `chart_1`)
@@ -210,7 +216,7 @@ function drawCharts() {
 function drawCanvasDefects() {
     if (!ctx) return;
 
-    ctx.clearRect(margin.left, margin.top, ctx.canvas.width, ctx.canvas.height);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.fillStyle = "#B6CDAF";
 
     defectFrameList.forEach(d => {
@@ -236,64 +242,28 @@ function drawBlackRectangle(width, height) {
 
     currentY = adjustedY + height;
 }
-
+const screenDefects = [];
 function updateDefects() {
-    drawCanvasDefects(); // 🟩 canvas繪製背景
+    if (!ctx) return;
 
-    const icons = svg.selectAll(".defect-icon")
-        .data(Object.values(defectImagesMap), d => d.id);
+    // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    // ctx.fillStyle = "#B6CDAF";
+    console.log(defectImagesMap);
+    // 繪製缺陷圖標
+    Object.values(defectImagesMap).forEach(d => {
+        const xPos = x(d.x) - margin.left;
+        const yPos = newY(d.y) - margin.top;
 
-    icons.attr("x", d => x(d.x))
-        .attr("y", d => newY(d.y));
+        // 繪製紅色矩形作為缺陷圖標
+        ctx.fillStyle = "red";
+        ctx.fillRect(xPos, yPos, 10, 10);
 
-    icons.enter()
-        .append("rect")
-        .attr("class", "defect-icon")
-        .attr("x", d => x(d.x))
-        .attr("y", d => newY(d.y))
-        .attr("width", 10)
-        .attr("height", 10)
-        .attr("fill", "red")
-        .attr("data-id", d => d.id)
-        .on("click", function () {
-            defectImgClick(this);
-        })
-        .on("mouseover", function (event, d) {
-            const popupGroup = svg.append("g").attr("class", "popup_icon");
-
-            popupGroup.append("rect")
-                .attr("width", 150)
-                .attr("height", 50)
-                .attr("fill", "white")
-                .attr("stroke", "black")
-                .attr("stroke-width", 2);
-
-            popupGroup.append("text")
-                .attr("x", 10)
-                .attr("y", 20)
-                .text(`絕對X: ${d.x}`);
-
-            popupGroup.append("text")
-                .attr("x", 10)
-                .attr("y", 40)
-                .text(`絕對Y: ${d.y}`);
-
-            svg.on("mousemove", function (event) {
-                const [mouseX, mouseY] = d3.pointer(event);
-                popupGroup.attr("transform", `translate(${mouseX + 5}, ${mouseY - 5})`);
-            });
-
-            d3.select(this).on("mouseout", function () {
-                popupGroup.remove();
-                svg.on("mousemove", null);
-            });
-        })
-        .style("cursor", "pointer");
-
-    icons.exit().remove();
-
-    // document.getElementById('total-defects').textContent = Object.keys(defectImagesMap).length;
+        // 添加鼠標事件
+        screenDefects.push({ ...d, screenX: xPos, screenY: yPos });
+    });
 }
+
+
 
 function updateAxis(width, height, margin) {
     svg.selectAll(".x-axis").remove();
@@ -322,6 +292,55 @@ document.addEventListener("DOMContentLoaded", () => {
     drawCharts();
     document.getElementById('start-defect').addEventListener('click', startdected);
     document.getElementById('stop-defect').addEventListener('click', stopdected);
+    // 只綁一次滑鼠事件
+    // canvas.addEventListener("mousemove", function (event) {
+    //     const rect = canvas.getBoundingClientRect();
+    //     const mouseX = event.clientX - rect.left;
+    //     const mouseY = event.clientY - rect.top;
+
+    //     let hovered = false;
+    //     for (const d of screenDefects) {
+    //         if (mouseX >= d.screenX && mouseX <= d.screenX + 10 &&
+    //             mouseY >= d.screenY && mouseY <= d.screenY + 10) {
+
+    //             canvas.style.cursor = "pointer";
+    //             hovered = true;
+
+    //             // 顯示訊息框（可選：這裡簡單顯示）
+    //             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // 清除
+    //             updateDefects(); // 重新畫 defect icon
+    //             ctx.fillStyle = "white";
+    //             ctx.fillRect(mouseX + 5, mouseY - 55, 150, 50);
+    //             ctx.strokeStyle = "black";
+    //             ctx.strokeRect(mouseX + 5, mouseY - 55, 150, 50);
+    //             ctx.fillStyle = "black";
+    //             ctx.fillText(`絕對X: ${d.x}`, mouseX + 10, mouseY - 35);
+    //             ctx.fillText(`絕對Y: ${d.y}`, mouseX + 10, mouseY - 15);
+
+    //             break;
+    //         }
+    //     }
+
+    //     if (!hovered) {
+    //         canvas.style.cursor = "default";
+    //         updateDefects(); // 清除 tooltip
+    //     }
+    // });
+
+    // canvas.addEventListener("click", function (event) {
+    //     const rect = canvas.getBoundingClientRect();
+    //     const mouseX = event.clientX - rect.left;
+    //     const mouseY = event.clientY - rect.top;
+
+    //     for (const d of screenDefects) {
+    //         if (mouseX >= d.screenX && mouseX <= d.screenX + 10 &&
+    //             mouseY >= d.screenY && mouseY <= d.screenY + 10) {
+    //             console.log(`Icon clicked: ID=${d.id}, X=${d.x}, Y=${d.y}`);
+    //             break;
+    //         }
+    //     }
+    // });
+    
 });
 
 // 把 SVG 的 icon 提到最上層
@@ -339,7 +358,7 @@ function startdected() {
     defectInterval = setInterval(() => {
         const massage = data;
         drawBlackRectangle(massage.w, massage.h);
-        console.log(massage.defect_data);
+        // console.log(massage.defect_data);
         massage.defect_data.forEach(function (defect) {
             defectImagesMap[defect.id] = defect;
             // 更新這個缺陷的y座標從現在的currentY往回算再加回來
